@@ -1,0 +1,63 @@
+services:
+  postgres:
+    image: postgres:16.4
+    environment:
+      POSTGRES_PASSWORD: userspw
+      POSTGRES_DB: users-db
+    ports:
+      - "5432:5432"
+  pubsub-emulator:
+    image: thekevjames/gcloud-pubsub-emulator:406.0.0
+    ports:
+      - 8681:8681
+    environment:
+      - PUBSUB_PROJECT1=users-project,users:my-subscription
+
+  wait-for-pubsub:
+    image: curlimages/curl:latest
+    depends_on:
+      - pubsub-emulator
+    command: sh -c 'until [[ "$(curl -sSf http://pubsub-emulator:8681)" = "Ok" ]]; do sleep 1; done;'
+    healthcheck:
+      test: ["CMD", "curl", "-sSf", "http://pubsub-emulator:8681"]
+      interval: 1s
+      timeout: 3s
+      retries: 10
+
+  # echo service simulates an application subscription
+  echo-service:
+    build: ./examples/echo-service
+    environment:
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8681
+      - PUBSUB_PROJECT_ID=users-project
+      - ECHO_SUBSCRIPTION=my-subscription
+    depends_on:
+      wait-for-pubsub:
+        condition: service_completed_successfully
+
+  # just to guarantee pubsub emulator is working
+  publish-service:
+    build: ./examples/publish-service
+    environment:
+      - PUBSUB_EMULATOR_HOST=pubsub-emulator:8681
+      - PUBSUB_PROJECT_ID=users-project
+      - PUBLISH_TOPIC_ID=users
+    depends_on:
+      wait-for-pubsub:
+        condition: service_completed_successfully
+
+  users:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      PG_DSN: host=postgres port=5432 user=postgres dbname=users-db password=userspw sslmode=disable
+      GIN_MODE: release
+      PUBSUB_PROJECT_ID: users-project
+      PUBSUB_USERS_TOPIC: users
+      PUBSUB_EMULATOR_HOST: pubsub-emulator:8681
+    volumes:
+      - ./migrations/postgresql:/migrations/postgresql:ro
+    ports:
+      - 8080:8080
+      - 8081:8081

@@ -1,0 +1,22 @@
+app:
+  name: 'users'
+  version: '1.0.0'
+  log_level: 'debug'
+
+http:
+  port: 8080
+
+grpc:
+  port: 8081
+
+postgres:
+  pool_max: 2
+
+pubsub:
+  enabled: true
+  project_id: users-project
+  users_topic: users
+
+notifications:
+  interval: 30
+  batch_size_max: 50

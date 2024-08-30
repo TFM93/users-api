@@ -1,0 +1,36 @@
+quiet: False
+disable-version-string: True
+with-expecter: True
+mockname: "{{.InterfaceName}}"
+filename: "{{.MockName}}.go"
+outpkg: mocks
+dir: "gen/mocks/{{.PackagePath}}"
+packages:
+    users/pkg/logger:
+      config:
+      interfaces:
+          Interface:
+              config:
+    users/pkg/pubsub:
+      config:
+      interfaces:
+          Interface:
+              config:
+    users/pkg/postgresql:
+      config:
+      interfaces:
+          DBProvider:
+              config:
+          Tx:
+              config:
+          Interface:
+              config:
+    users/internal/domain:
+      config:
+        all: True
+        dir: "gen/mocks/users/domain"
+    users/internal/app:
+      config:
+        all: True
+        dir: "gen/mocks/users/app"
+    
